@@ -32,7 +32,8 @@ function SPECIAL.CalcDerived(state)
         healing_rate = (sp.endu >= 9 and 10) or (sp.endu >= 6 and 5) or 0,
         skill_rate = (sp.intel * 0.5) + 10,
         reload_speed = 10 / (sp.agi + 5),
-        implant_limit = sp.endu
+        implant_limit = sp.endu,
+        repair_skill = 2 + (2 * sp.intel) + math.ceil(sp.lck / 2)
     }
 
     return sp, derived
@@ -61,4 +62,6 @@ function SPECIAL.Init(state)
     state.skill_rate = derived.skill_rate
     state.reload_speed = derived.reload_speed
     state.implant_limit = derived.implant_limit
+    state.repair_skill = derived.repair_skill
+    state.repair_cap = math.min(100, derived.repair_skill or 0)
 end

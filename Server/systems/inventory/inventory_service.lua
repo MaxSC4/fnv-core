@@ -314,6 +314,22 @@ local function FindRepairDonor(inv, item_id, exclude_id)
     return nil
 end
 
+local function GetRepairCap(state)
+    local cap = tonumber(state and state.repair_cap)
+    if cap == nil then
+        local skill = tonumber(state and state.repair_skill)
+        if skill == nil and SPECIAL and SPECIAL.CalcDerived then
+            local _, derived = SPECIAL.CalcDerived(state or {})
+            skill = derived and derived.repair_skill
+        end
+        cap = skill
+    end
+    if cap == nil then return 100 end
+    if cap < 0 then return 0 end
+    if cap > 100 then return 100 end
+    return cap
+end
+
 local function SetWeaponHolstered(player, state, holstered)
     local def = GetEquippedWeaponDef(state)
     if not def then return end
@@ -659,9 +675,10 @@ Events.SubscribeRemote("FNV:Inv:Action", function(player, payload)
         local inst = state.inventory.instances and state.inventory.instances[instance_id]
         if not inst then return end
         local cnd = ClampCondition(inst.condition or def.cnd or 100)
-        if cnd >= 100 then
+        local cap = GetRepairCap(state)
+        if cnd >= cap then
             if HUD_NOTIFY and HUD_NOTIFY.Send then
-                HUD_NOTIFY.Send(player, "Already repaired", 1500)
+                HUD_NOTIFY.Send(player, "Already at repair cap", 1500)
             end
             return
         end
@@ -670,7 +687,7 @@ Events.SubscribeRemote("FNV:Inv:Action", function(player, payload)
         if INV.Count(state.inventory, REPAIR_KIT_ID) > 0 then
             local ok = INV.Remove(state.inventory, REPAIR_KIT_ID, 1)
             if ok then
-                cnd = math.min(100, cnd + REPAIR_KIT_BONUS)
+                cnd = math.min(cap, cnd + REPAIR_KIT_BONUS)
                 used_kit = true
             end
         end
@@ -687,7 +704,7 @@ Events.SubscribeRemote("FNV:Inv:Action", function(player, payload)
             local ok = INV.Remove(state.inventory, item_id, 1, donor_id)
             if not ok then return end
             local gain = math.max(REPAIR_DONOR_MIN, donor_cnd * REPAIR_DONOR_MULT)
-            cnd = math.min(100, cnd + gain)
+            cnd = math.min(cap, cnd + gain)
         end
 
         inst.condition = cnd

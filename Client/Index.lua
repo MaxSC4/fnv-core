@@ -25,6 +25,8 @@ local SendEnemyTarget
 local drop_block = { char = nil }
 local current_container_open_id = nil
 local current_container_transfer_open_id = nil
+local inv_open = false
+local inv_modal_open = false
 
 local function ForceFirstPerson()
     local player = Client.GetLocalPlayer()
@@ -206,7 +208,8 @@ Input.Bind("FNV_Inventory", InputEvent.Pressed, function()
 end)
 
 local function SendInvKey(key)
-    if current_mode ~= "inventory" then return end
+    if not inv_open and current_mode ~= "inventory" then return end
+    if inv_modal_open then return end
     if UI and (UI.IsValid and UI:IsValid()) and ui_ready then
         UI:CallEvent("Inv:Key", { key = key })
     end
@@ -217,6 +220,7 @@ Input.Register("FNV_InvDown", "Down", "Inventory Down")
 Input.Register("FNV_InvLeft", "Left", "Inventory Left")
 Input.Register("FNV_InvRight", "Right", "Inventory Right")
 Input.Register("FNV_InvAction", "E", "Inventory Action")
+Input.Register("FNV_InvActionEnter", "Enter", "Inventory Action")
 Input.Register("FNV_InvDrop", "R", "Inventory Drop")
 Input.Register("FNV_InvInspect", "I", "Inventory Inspect")
 Input.Register("FNV_InvSort", "S", "Inventory Sort")
@@ -231,6 +235,7 @@ Input.Bind("FNV_InvDown", InputEvent.Pressed, function() SendInvKey("down") end)
 Input.Bind("FNV_InvLeft", InputEvent.Pressed, function() SendInvKey("left") end)
 Input.Bind("FNV_InvRight", InputEvent.Pressed, function() SendInvKey("right") end)
 Input.Bind("FNV_InvAction", InputEvent.Pressed, function() SendInvKey("action") end)
+Input.Bind("FNV_InvActionEnter", InputEvent.Pressed, function() SendInvKey("action") end)
 Input.Bind("FNV_InvDrop", InputEvent.Pressed, function() SendInvKey("drop") end)
 Input.Bind("FNV_InvInspect", InputEvent.Pressed, function() SendInvKey("inspect") end)
 Input.Bind("FNV_InvSort", InputEvent.Pressed, function() SendInvKey("sort") end)
@@ -323,6 +328,24 @@ Package.Subscribe("Load", function()
 
         UI:Subscribe("Inv:CloseRequest", function(data)
             Events.CallRemote("FNV:Inv:CloseRequest", data)
+        end)
+
+        UI:Subscribe("Inv:ModalOpen", function(data)
+            inv_modal_open = true
+            if UI and (UI.IsValid and UI:IsValid()) then
+                Input.SetInputEnabled(false)
+                Input.SetMouseEnabled(true)
+                UI:SetFocus()
+            end
+        end)
+
+        UI:Subscribe("Inv:ModalClose", function(data)
+            inv_modal_open = false
+            if UI and (UI.IsValid and UI:IsValid()) then
+                Input.SetInputEnabled(true)
+                Input.SetMouseEnabled(true)
+                UI:SetFocus()
+            end
         end)
 
         UI:Subscribe("Container:Take", function(data)
@@ -514,6 +537,7 @@ end)
 
 Events.SubscribeRemote("FNV:Inv:Open", function(payload)
     current_mode = "inventory"
+    inv_open = true
     if UI and (UI.IsValid and UI:IsValid()) then
         Input.SetInputEnabled(true)
         Input.SetMouseEnabled(true)
@@ -526,6 +550,7 @@ end)
 
 Events.SubscribeRemote("FNV:Inv:Close", function(payload)
     current_mode = "gameplay"
+    inv_open = false
     pending_inv_close = payload or { open = false }
     pending_inv_open = nil
     ResetGameplayInput()

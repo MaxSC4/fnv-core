@@ -589,6 +589,14 @@ Events.SubscribeRemote("FNV:Inv:Action", function(player, payload)
         if not ok and HUD_NOTIFY and HUD_NOTIFY.Send then
             HUD_NOTIFY.Send(player, "Use failed: " .. tostring(reason), 2000)
         end
+        if ok and reason == "repaired" and HUD_NOTIFY and HUD_NOTIFY.Send then
+            HUD_NOTIFY.Send(player, {
+                title = "Réparation",
+                subtitle = tostring(def.name or item_id) .. " réparé !",
+                ms = 1500,
+                icon = "icons/popup/glow_content.png"
+            })
+        end
         if HUD_SYNC and HUD_SYNC.MarkDirty then
             HUD_SYNC.MarkDirty(state)
             if HUD_SYNC.Flush then
@@ -735,10 +743,10 @@ Events.SubscribeRemote("FNV:Inv:Action", function(player, payload)
         end
         if HUD_NOTIFY and HUD_NOTIFY.Send then
             HUD_NOTIFY.Send(player, {
-                title = "Reparation",
-                subtitle = tostring(def.name or item_id) .. " repare !",
+                title = "Réparation",
+                subtitle = tostring(def.name or item_id) .. " réparé !",
                 ms = 1500,
-                icon = "icons/popup/glow_content"
+                icon = "icons/popup/glow_content.png"
             })
         end
         SaveInventoryState(player, state)
@@ -804,3 +812,4 @@ function INV_SERVICE.RepairItem(player, state, item_id, instance_id, mode)
     if not def then return false, "unknown_item" end
     return RepairItem(player, state, def, item_id, instance_id, mode)
 end
+

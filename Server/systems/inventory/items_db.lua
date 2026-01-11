@@ -1,8 +1,8 @@
 ITEMS = {
     water = {
-        name = "Eau Purifiee",
-        desc = "Une eau propre et sans radiations. Rare dans les terres desolees, presque un luxe dans le Mojave. Ideale pour se desalterer sans effets secondaires.",
-        info = "Hydrate legerement. Usage courant dans le Mojave.",
+        name = "Eau Purifiée",
+        desc = "Une eau propre et sans radiations. Rare dans les terres désolées, presque un luxe dans le Mojave. Idéale pour se désaltérer sans effets secondaires.",
+        info = "Hydrate légèrement. Usage courant dans le Mojave.",
         category = "aid",
         wg = 1.00,
         cnd = 100,
@@ -14,8 +14,8 @@ ITEMS = {
 
     stimpack = {
         name = "Stimpak",
-        desc = "Une dose de medecine portative pour te remettre vite sur pied. Soigne les blessures legeres et te permet de repartir.",
-        info = "Regenere 20% des HP max (4x10).",
+        desc = "Une dose de médecine portative pour te remettre vite sur pied. Soigne les blessures légères et te permet de repartir.",
+        info = "Régénère 20% des HP max (4x10).",
         category = "aid",
         wg = 1.00,
         cnd = 100,
@@ -107,7 +107,7 @@ ITEMS = {
 
     vault_suit_21 = {
         name = "Combinaison de l'Abri 21",
-        desc = "Une tenue Vault-Tec numerotee, resistante et encore propre. Un classique du Mojave.",
+        desc = "Une tenue Vault-Tec numérotée, résistante et encore propre. Un classique du Mojave.",
         category = "apparel",
         slot = "body",
         dt = 6,
@@ -120,8 +120,8 @@ ITEMS = {
     },
 
     ncr_beret = {
-        name = "Beret de la RNC",
-        desc = "Un beret militaire de la RNC. Simple, discret, mais reconnaissable.",
+        name = "Béret de la RNC",
+        desc = "Un béret militaire de la RNC. Simple, discret, mais reconnaissable.",
         category = "apparel",
         slot = "head",
         dt = 2,
@@ -185,8 +185,8 @@ ITEMS = {
 
     nuka_cola = {
         name = "Nuka-Cola",
-        desc = "Un soda sucre tres populaire avant-guerre. Toujours un petit boost de moral.",
-        info = "Restaure un peu d'energie.",
+        desc = "Un soda sucré très populaire avant-guerre. Toujours un petit boost de moral.",
+        info = "Restaure un peu d'énergie.",
         category = "aid",
         wg = 1.0,
         cnd = 100,
@@ -198,7 +198,7 @@ ITEMS = {
     sunset_sarsaparilla = {
         name = "Sunset Sarsaparilla",
         desc = "Boisson gazeuse du Mojave, plus douce que la Nuka-Cola.",
-        info = "Restaure un peu d'energie.",
+        info = "Restaure un peu d'énergie.",
         category = "aid",
         wg = 1.0,
         cnd = 100,
@@ -209,8 +209,8 @@ ITEMS = {
 
     cram = {
         name = "Cram",
-        desc = "Viande en conserve douteuse, mais ca remplit l'estomac.",
-        info = "Nourrit legerement.",
+        desc = "Viande en conserve douteuse, mais ça remplit l'estomac.",
+        info = "Nourrit légèrement.",
         category = "aid",
         wg = 1.0,
         cnd = 100,
@@ -221,8 +221,8 @@ ITEMS = {
 
     sugar_bombs = {
         name = "Sugar Bombs",
-        desc = "Cereales tres sucrees, un classique pre-guerre.",
-        info = "Nourrit legerement.",
+        desc = "Céréales très sucrées, un classique pré-guerre.",
+        info = "Nourrit légèrement.",
         category = "aid",
         wg = 0.7,
         cnd = 100,
@@ -233,8 +233,8 @@ ITEMS = {
 
     pork_beans = {
         name = "Pork 'n' Beans",
-        desc = "Haricots au porc en conserve. Pas tres fin mais efficace.",
-        info = "Nourrit legerement.",
+        desc = "Haricots au porc en conserve. Pas très fin mais efficace.",
+        info = "Nourrit légèrement.",
         category = "aid",
         wg = 1.0,
         cnd = 100,
@@ -245,8 +245,8 @@ ITEMS = {
 
     whiskey = {
         name = "Whiskey",
-        desc = "Alcool fort. Redonne du courage, pas toujours de la lucidite.",
-        info = "Effet temporaire. Peut deshydrater.",
+        desc = "Alcool fort. Redonne du courage, pas toujours de la lucidité.",
+        info = "Effet temporaire. Peut déshydrater.",
         category = "aid",
         wg = 1.0,
         cnd = 100,
@@ -269,8 +269,8 @@ ITEMS = {
 
     jet = {
         name = "Jet",
-        desc = "Inhalant tres addictif. Ralentit la perception du temps.",
-        info = "Temps dilate temporairement.",
+        desc = "Inhalant très addictif. Ralentit la perception du temps.",
+        info = "Temps dilaté temporairement.",
         category = "aid",
         wg = 0.1,
         cnd = 100,
@@ -280,9 +280,9 @@ ITEMS = {
     },
 
     repair_kit = {
-        name = "Kit de reparation",
-        desc = "Outils compacts pour effectuer des reparations rapides.",
-        info = "Permet de reparer une arme ou armure.",
+        name = "Kit de réparation",
+        desc = "Outils compacts pour effectuer des réparations rapides.",
+        info = "Permet de réparer une arme ou armure.",
         category = "misc",
         wg = 2.0,
         cnd = 100,
@@ -294,9 +294,9 @@ ITEMS = {
     },
 
     bobby_pin = {
-        name = "Bobby Pin",
-        desc = "Epingle a cheveux utile pour crocheter des serrures.",
-        info = "Utilise pour le lockpick.",
+        name = "Épingle à cheveux",
+        desc = "Épingle à cheveux utile pour crocheter des serrures.",
+        info = "Utilisée pour le lockpick.",
         category = "misc",
         wg = 0.01,
         cnd = 100,
@@ -307,8 +307,8 @@ ITEMS = {
 
     lottery_ticket = {
         name = "Ticket de loterie",
-        desc = "Un ticket de loterie poussiereux. Qui sait ?",
-        info = "Objet de chance ou de quete.",
+        desc = "Un ticket de loterie poussiéreux. Qui sait ?",
+        info = "Objet de chance ou de quête.",
         category = "misc",
         wg = 0.01,
         cnd = 100,
@@ -318,9 +318,9 @@ ITEMS = {
     },
 
     fusion_cell = {
-        name = "Cellule d'energie",
-        desc = "Munition standard pour armes a energie.",
-        info = "Utilisee par les armes laser.",
+        name = "Cellule d'énergie",
+        desc = "Munition standard pour armes à énergie.",
+        info = "Utilisée par les armes laser.",
         category = "ammo",
         wg = 0.02,
         cnd = 100,

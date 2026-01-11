@@ -245,7 +245,7 @@ Events.SubscribeRemote("FNV:Loot:Pickup", function(player, payload)
         HUD_SYNC.Send(player, state)
     end
     if HUD_NOTIFY and HUD_NOTIFY.Send then
-        HUD_NOTIFY.Send(player, "Ramasse: " .. tostring(data.name or data.item_id), 1500)
+        HUD_NOTIFY.Send(player, "Ramassé : " .. tostring(data.name or data.item_id), 1500)
     end
 
     Events.CallRemote("FNV:Interact:Prompt", player, { show = false })

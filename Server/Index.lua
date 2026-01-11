@@ -200,7 +200,7 @@ Package.Subscribe("Load", function()
             "stash_01",
             Vector(100, 0, 0),
             Rotator(0, 0, 0),
-            "Caisse rouillee",
+            "Caisse rouillée",
             "nanos-world::SM_Crate_07"
         )
         local stash = CONTAINER.List and CONTAINER.List["stash_01"]

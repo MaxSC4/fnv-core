@@ -337,7 +337,7 @@ Events.SubscribeRemote("FNV:Container:Interact", function(player, payload)
     local moved = MoveAllItems(data.inventory, state.inventory)
     if HUD_NOTIFY and HUD_NOTIFY.Send then
         if moved > 0 then
-            HUD_NOTIFY.Send(player, "Conteneur fouille (+ " .. tostring(moved) .. ")", 1500)
+            HUD_NOTIFY.Send(player, "Conteneur fouillé (+ " .. tostring(moved) .. ")", 1500)
         else
             HUD_NOTIFY.Send(player, "Conteneur vide", 1500)
         end

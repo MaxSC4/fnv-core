@@ -89,7 +89,7 @@ local function HandleSprintLock(player, state)
         SetSprintAllowed(player, false)
         SendSprintLock(player, true)
         if HUD_NOTIFY and HUD_NOTIFY.Send then
-            HUD_NOTIFY.Send(player, "AP trop bas (sprint bloque)", 2000)
+            HUD_NOTIFY.Send(player, "AP trop bas (sprint bloqué)", 2000)
         end
     elseif locked then
         local threshold = (state.ap_max or 0) * 0.20

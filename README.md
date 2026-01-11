@@ -128,7 +128,7 @@ These are the core events emitted/consumed by the UI. The UI package listens to 
 - `Server/systems/dialog/dialog_db.lua`
 - `Server/systems/economy/currency_db.lua`
 
-## Notes
+## Notes (Webhook Test)
 
 - UI package is expected to implement all WebUI listeners and emit intent events back to core.
 - Client Lua remains a bridge: input/focus handling + remote dispatch only.

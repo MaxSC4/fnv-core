@@ -734,7 +734,12 @@ Events.SubscribeRemote("FNV:Inv:Action", function(player, payload)
             return
         end
         if HUD_NOTIFY and HUD_NOTIFY.Send then
-            HUD_NOTIFY.Send(player, "Repaired: " .. tostring(def.name or item_id), 1500)
+            HUD_NOTIFY.Send(player, {
+                title = "Reparation",
+                subtitle = tostring(def.name or item_id) .. " repare !",
+                ms = 1500,
+                icon = "icons/popup/glow_content"
+            })
         end
         SaveInventoryState(player, state)
         RefreshInventory(player, state)

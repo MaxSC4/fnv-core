@@ -80,8 +80,8 @@ local function SpawnCharacterFor(player, state)
 
     local spawn_pos = DEFAULT_SPAWN_POS
     local character = Character(spawn_pos, Rotator(0, 0, 0), "nanos-world::SK_Female")
-    if character.SetCanDropWeapon then
-        character:SetCanDropWeapon(false)
+    if character.SetCanDrop then
+        character:SetCanDrop(false)
     end
     player:Possess(character)
     return character

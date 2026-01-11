@@ -27,6 +27,11 @@ local function ApplyWeaponDamageFromCondition(weapon, def, condition)
     weapon:SetDamage(base * scale)
 end
 
+local REPAIR_KIT_ID = "repair_kit"
+local REPAIR_KIT_BONUS = 25
+local REPAIR_DONOR_MULT = 0.6
+local REPAIR_DONOR_MIN = 10
+
 local RefreshInventory
 
 local function SetMode(player, mode)
@@ -297,6 +302,16 @@ local function GetEquippedWeaponDef(state)
     local def = ITEMS and ITEMS.Get and ITEMS.Get(inst.base_id)
     if not def or def.category ~= "weapons" then return nil, nil end
     return def, inst
+end
+
+local function FindRepairDonor(inv, item_id, exclude_id)
+    if not inv or not inv.instances then return nil end
+    for id, inst in pairs(inv.instances) do
+        if id ~= exclude_id and inst and inst.base_id == item_id and not inst.equipped then
+            return id, inst
+        end
+    end
+    return nil
 end
 
 local function SetWeaponHolstered(player, state, holstered)
@@ -627,7 +642,74 @@ Events.SubscribeRemote("FNV:Inv:Action", function(player, payload)
         return
     end
 
-    if action == "repair" or action == "mod" then
+    if action == "repair" then
+        if not instance_id or not INV.HasInstance(state.inventory, instance_id, item_id) then
+            if HUD_NOTIFY and HUD_NOTIFY.Send then
+                HUD_NOTIFY.Send(player, "Cannot repair: invalid item", 2000)
+            end
+            return
+        end
+        if def.category ~= "weapons" and def.category ~= "apparel" then
+            if HUD_NOTIFY and HUD_NOTIFY.Send then
+                HUD_NOTIFY.Send(player, "Cannot repair this item", 2000)
+            end
+            return
+        end
+
+        local inst = state.inventory.instances and state.inventory.instances[instance_id]
+        if not inst then return end
+        local cnd = ClampCondition(inst.condition or def.cnd or 100)
+        if cnd >= 100 then
+            if HUD_NOTIFY and HUD_NOTIFY.Send then
+                HUD_NOTIFY.Send(player, "Already repaired", 1500)
+            end
+            return
+        end
+
+        local used_kit = false
+        if INV.Count(state.inventory, REPAIR_KIT_ID) > 0 then
+            local ok = INV.Remove(state.inventory, REPAIR_KIT_ID, 1)
+            if ok then
+                cnd = math.min(100, cnd + REPAIR_KIT_BONUS)
+                used_kit = true
+            end
+        end
+
+        if not used_kit then
+            local donor_id, donor = FindRepairDonor(state.inventory, item_id, instance_id)
+            if not donor_id or not donor then
+                if HUD_NOTIFY and HUD_NOTIFY.Send then
+                    HUD_NOTIFY.Send(player, "Need a repair kit or spare item", 2000)
+                end
+                return
+            end
+            local donor_cnd = ClampCondition(donor.condition or def.cnd or 100)
+            local ok = INV.Remove(state.inventory, item_id, 1, donor_id)
+            if not ok then return end
+            local gain = math.max(REPAIR_DONOR_MIN, donor_cnd * REPAIR_DONOR_MULT)
+            cnd = math.min(100, cnd + gain)
+        end
+
+        inst.condition = cnd
+        if state.equipped and state.equipped.weapon_instance_id == instance_id then
+            local w = INV_SERVICE.WEAPONS[player]
+            if w and w.IsValid and w:IsValid() then
+                ApplyWeaponDamageFromCondition(w, def, cnd)
+            end
+        end
+
+        if HUD_NOTIFY and HUD_NOTIFY.Send then
+            HUD_NOTIFY.Send(player, "Repaired: " .. tostring(def.name or item_id), 1500)
+        end
+        SaveInventoryState(player, state)
+        RefreshInventory(player, state)
+        if HUD_SYNC and HUD_SYNC.Send then
+            HUD_SYNC.Send(player, state)
+        end
+        return
+    end
+
+    if action == "mod" then
         if HUD_NOTIFY and HUD_NOTIFY.Send then
             HUD_NOTIFY.Send(player, "Action not implemented", 2000)
         end

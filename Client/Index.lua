@@ -341,6 +341,10 @@ Package.Subscribe("Load", function()
 
         UI:Subscribe("Inv:ModalClose", function(data)
             inv_modal_open = false
+            if current_mode == "gameplay" and not inv_open then
+                ResetGameplayInput()
+                return
+            end
             if UI and (UI.IsValid and UI:IsValid()) then
                 Input.SetInputEnabled(true)
                 Input.SetMouseEnabled(true)

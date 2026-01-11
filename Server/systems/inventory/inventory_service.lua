@@ -585,14 +585,16 @@ Events.SubscribeRemote("FNV:Inv:Action", function(player, payload)
     if not def then return end
 
     if action == "use" then
-        local ok, reason = ITEM_USE.Use(state, item_id, instance_id, player)
+        local ok, reason, meta = ITEM_USE.Use(state, item_id, instance_id, player)
         if not ok and HUD_NOTIFY and HUD_NOTIFY.Send then
             HUD_NOTIFY.Send(player, "Use failed: " .. tostring(reason), 2000)
         end
         if ok and reason == "repaired" and HUD_NOTIFY and HUD_NOTIFY.Send then
+            local target_def = meta and meta.target_id and ITEMS and ITEMS.Get and ITEMS.Get(meta.target_id)
+            local repaired_name = (target_def and target_def.name) or (meta and meta.target_id) or (def.name or item_id)
             HUD_NOTIFY.Send(player, {
                 title = "Réparation",
-                subtitle = tostring(def.name or item_id) .. " réparé !",
+                subtitle = tostring(repaired_name) .. " réparé !",
                 ms = 1500,
                 icon = "icons/popup/glow_content.png"
             })

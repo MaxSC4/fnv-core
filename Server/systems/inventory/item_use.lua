@@ -60,7 +60,7 @@ function ITEM_USE.Use(player_state, item_id, instance_id, player)
         if not ok then
             return false, reason
         end
-        return true, "repaired"
+        return true, "repaired", { target_id = target.base_id, target_instance_id = target_id }
     end
 
     if instance_id then

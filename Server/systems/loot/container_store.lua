@@ -7,11 +7,19 @@ end
 function CONTAINER_STORE.Load(container_id)
     local raw = PDATA.Get(Key(container_id))
     if type(raw) == "string" then
-        local decoded = JSON.parse(raw)
-        if type(decoded) == "table" then
-            return INV.Normalize(decoded)
+        if JSON and JSON.parse then
+            local ok, decoded = pcall(JSON.parse, raw)
+            if ok and type(decoded) == "table" then
+                if decoded.instances and decoded.instances._empty then
+                    decoded.instances = {}
+                end
+                return INV.Normalize(decoded)
+            end
         end
     elseif type(raw) == "table" then
+        if raw.instances and raw.instances._empty then
+            raw.instances = {}
+        end
         return INV.Normalize(raw)
     end
     return INV.New()
@@ -46,6 +54,10 @@ function CONTAINER_STORE.Save(container_id, inv)
             end
             instances[tostring(id)] = out
         end
+    end
+
+    if next(instances) == nil then
+        instances = { _empty = true }
     end
 
     local persist = {

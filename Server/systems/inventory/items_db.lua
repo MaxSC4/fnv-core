@@ -280,7 +280,7 @@ ITEMS = {
     },
 
     repair_kit = {
-        name = "Repair Kit",
+        name = "Kit de reparation",
         desc = "Outils compacts pour effectuer des reparations rapides.",
         info = "Permet de reparer une arme ou armure.",
         category = "misc",
@@ -288,7 +288,9 @@ ITEMS = {
         cnd = 100,
         icon = "icons/items/item_repair_kit.png",
         value = 45,
-        max_stack = 5
+        max_stack = 5,
+        actions = { "use" },
+        use = { type = "repair_kit" }
     },
 
     bobby_pin = {

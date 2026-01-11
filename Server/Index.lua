@@ -59,7 +59,7 @@ BOOT.Start()
 -- ------------------------------------------------------------
 -- Helpers
 -- ------------------------------------------------------------
-local DEV_RESET_INVENTORY = false
+local DEV_RESET_INVENTORY = true
 local DEFAULT_SPAWN_POS = Vector(1400, 800, 300)
 local function GetPlayerID(player)
     if player.GetSteamID then
@@ -115,12 +115,15 @@ local function SeedTestInventory(inv)
     INV.Add(inv, "fusion_cell", 25)
     INV.Add(inv, "ammo_9mm", 60)
     INV.Add(inv, "ammo_556", 2000)
+    INV.Add(inv, "repair_kit", 2)
     INV.Add(inv, "scrap_metal", 5)
     INV.Add(inv, "wrench", 1)
     INV.Add(inv, "note_vault", 1)
     INV.Add(inv, "pistol_10mm", 1, { condition = 80 })
+    INV.Add(inv, "pistol_10mm", 1, { condition = 20 })
     INV.Add(inv, "varmint_rifle", 1, { condition = 65 })
     INV.Add(inv, "vault_suit_21", 1, { condition = 95 })
+    INV.Add(inv, "vault_suit_21", 1, { condition = 15 })
     INV.Add(inv, "ncr_beret", 1, { condition = 90 })
 end
 

@@ -257,6 +257,32 @@ function INV.BuildPayload(state)
     local inv = INV.Normalize(state and state.inventory)
     local categories = { "weapons", "apparel", "aid", "ammo", "misc", "notes" }
     local items_by_category = { weapons = {}, apparel = {}, aid = {}, ammo = {}, misc = {}, notes = {} }
+    local equipped_items = { weapon = nil, armor_body = nil, armor_head = nil }
+
+    local function BuildEquipped(instance_id)
+        if not instance_id then return nil end
+        local inst = inv.instances and inv.instances[instance_id]
+        if not inst then return nil end
+        local def = GetDef(inst.base_id) or {}
+        local name = inst.custom_name or def.name or inst.base_id
+        local cnd = inst.condition or def.cnd
+        local value = def.value or 0
+        if cnd ~= nil and INV.CalcValue then
+            local scaled = INV.CalcValue(def, cnd)
+            if scaled ~= nil then value = scaled end
+        end
+        return {
+            item_id = inst.base_id,
+            instance_id = instance_id,
+            name = name,
+            icon = def.icon,
+            category = def.category,
+            cnd = cnd,
+            max_cnd = def.cnd or 100,
+            value = value,
+            weight = def.wg or 0
+        }
+    end
 
     for _, entry in ipairs(INV.GetEntries(inv)) do
         local def = entry.def or {}
@@ -319,6 +345,11 @@ function INV.BuildPayload(state)
             implant_limit = state and state.implant_limit or 0
         },
         equipped = state and state.equipped or {},
+        equipped_items = {
+            weapon = state and state.equipped and BuildEquipped(state.equipped.weapon_instance_id) or nil,
+            armor_body = state and state.equipped and BuildEquipped(state.equipped.armor_body_instance_id) or nil,
+            armor_head = state and state.equipped and BuildEquipped(state.equipped.armor_head_instance_id) or nil
+        },
         sort = { key = "name", dir = "asc" }
     }
 end

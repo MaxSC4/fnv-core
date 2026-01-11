@@ -156,7 +156,7 @@ function CONTAINER.Spawn(id, location, rot, name, mesh)
         prop:SetGravityEnabled(false)
     end
 
-    local inv = INV.New()
+    local inv = (CONTAINER_STORE and CONTAINER_STORE.Load and CONTAINER_STORE.Load(id)) or INV.New()
 
     CONTAINER.List[id] = {
         id = id,
@@ -176,6 +176,13 @@ function CONTAINER.Spawn(id, location, rot, name, mesh)
 
     CONTAINER.BroadcastUpdate(id)
     return true
+end
+
+local function SaveContainer(id, data)
+    if not id or not data or not data.inventory then return end
+    if CONTAINER_STORE and CONTAINER_STORE.Save then
+        CONTAINER_STORE.Save(id, data.inventory)
+    end
 end
 
 local function MoveAllItems(container_inv, player_inv)
@@ -393,6 +400,8 @@ Events.SubscribeRemote("FNV:Container:Take", function(player, payload)
         return
     end
 
+    SaveContainer(container_id, data)
+
     if INV_STORE and INV_STORE.Save and PLAYERS and PLAYERS.GetID then
         local player_id = PLAYERS.GetID(player)
         if player_id then
@@ -460,6 +469,8 @@ Events.SubscribeRemote("FNV:Container:TransferMove", function(player, payload)
         return
     end
 
+    SaveContainer(container_id, data)
+
     if INV_STORE and INV_STORE.Save and PLAYERS and PLAYERS.GetID then
         local player_id = PLAYERS.GetID(player)
         if player_id then
@@ -486,6 +497,8 @@ Events.SubscribeRemote("FNV:Container:TransferTakeAll", function(player, payload
     if not state or not state.inventory then return end
 
     MoveAllItems(data.inventory, state.inventory)
+
+    SaveContainer(container_id, data)
 
     if INV_STORE and INV_STORE.Save and PLAYERS and PLAYERS.GetID then
         local player_id = PLAYERS.GetID(player)

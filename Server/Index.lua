@@ -16,6 +16,7 @@ Package.Require("Server/systems/inventory/item_use.lua")
 Package.Require("Server/systems/inventory/inventory_service.lua")
 Package.Require("Server/systems/loot/loot_service.lua")
 Package.Require("Server/systems/loot/container_service.lua")
+Package.Require("Server/systems/loot/container_store.lua")
 
 
 -- ECONOMY / WALLET
@@ -196,14 +197,20 @@ Package.Subscribe("Load", function()
             "stash_01",
             Vector(100, 0, 0),
             Rotator(0, 0, 0),
-            "Caisse rouillée",
+            "Caisse rouillee",
             "nanos-world::SM_Crate_07"
         )
         local stash = CONTAINER.List and CONTAINER.List["stash_01"]
         if stash and stash.inventory then
-            INV.Add(stash.inventory, "water", 2)
-            INV.Add(stash.inventory, "stimpack", 1)
-            INV.Add(stash.inventory, "ammo_9mm", 20)
+            local entries = INV.GetEntries(stash.inventory)
+            if not entries or #entries == 0 then
+                INV.Add(stash.inventory, "water", 2)
+                INV.Add(stash.inventory, "stimpack", 1)
+                INV.Add(stash.inventory, "ammo_9mm", 20)
+                if CONTAINER_STORE and CONTAINER_STORE.Save then
+                    CONTAINER_STORE.Save("stash_01", stash.inventory)
+                end
+            end
         end
     end
 end)

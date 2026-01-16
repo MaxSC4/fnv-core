@@ -4,6 +4,31 @@ CONTAINER.SESSIONS = CONTAINER.SESSIONS or {}
 
 local INTERACT_RANGE = 300
 
+local function Round2(value)
+    if value == nil then return nil end
+    return math.floor((value * 100) + 0.5) / 100
+end
+
+local function RoundInt(value)
+    if value == nil then return nil end
+    return math.floor(tonumber(value) + 0.5)
+end
+
+local function CalcDps(def)
+    if not def or not def.weapon then return nil end
+    local damage = tonumber(def.weapon.damage)
+    local cadence = tonumber(def.weapon.cadence)
+    if not damage or not cadence or cadence <= 0 then return nil end
+    return Round2(damage / cadence)
+end
+
+local function CalcVw(value, weight)
+    value = tonumber(value)
+    weight = tonumber(weight)
+    if not value or not weight or weight <= 0 then return nil end
+    return Round2(value / weight)
+end
+
 local function DistSq(a, b)
     local dx = a.X - b.X
     local dy = a.Y - b.Y
@@ -34,6 +59,10 @@ local function BuildItemsPayload(inv)
         if def then
             local cnd = entry.condition or def.cnd or 100
             local value = INV and INV.CalcValue and INV.CalcValue(def, cnd) or def.value
+            local weight = def.wg or 0
+            local weight_int = RoundInt(weight)
+            local dps = CalcDps(def)
+            local vw = CalcVw(value, weight)
             out[#out + 1] = {
                 item_id = entry.base_id,
                 name = entry.custom_name or def.name or entry.base_id,
@@ -42,11 +71,20 @@ local function BuildItemsPayload(inv)
                 stackable = entry.stackable == true,
                 instance_id = entry.instance_id,
                 cnd = cnd,
-                wg = def.wg or 0,
+                wg = weight_int,
                 value = value,
                 icon = def.icon,
+                item_icon = def.item_icon or def.icon,
                 info = def.info,
-                desc = def.desc
+                desc = def.desc,
+                dps = dps,
+                vw = vw,
+                str = def.str,
+                deg = def.weapon and def.weapon.damage or nil,
+                pds = weight_int,
+                val = value,
+                ammo_type = def.ammo_type,
+                effects = def.effects or {}
             }
         end
     end

@@ -68,6 +68,64 @@ local function ClampCondition(condition)
     return condition
 end
 
+local function Round2(value)
+    if value == nil then return nil end
+    return math.floor((value * 100) + 0.5) / 100
+end
+
+local function RoundInt(value)
+    if value == nil then return nil end
+    return math.floor(tonumber(value) + 0.5)
+end
+
+local function CalcDps(def)
+    if not def or not def.weapon then return nil end
+    local damage = tonumber(def.weapon.damage)
+    local cadence = tonumber(def.weapon.cadence)
+    if not damage or not cadence or cadence <= 0 then return nil end
+    return Round2(damage / cadence)
+end
+
+local function CalcVw(value, weight)
+    value = tonumber(value)
+    weight = tonumber(weight)
+    if not value or not weight or weight <= 0 then return nil end
+    return Round2(value / weight)
+end
+
+local function ArmorScaleFromCondition(condition)
+    condition = tonumber(condition)
+    if condition == nil then return 1 end
+    if condition < 0 then condition = 0 end
+    if condition > 100 then condition = 100 end
+    local pct = condition / 100
+    local scaled = 0.66 + math.min((0.34 * pct) / 0.5, 0.34)
+    return math.max(0.66, math.min(1.0, scaled))
+end
+
+local function CalcArmorStats(state, inv)
+    if not state or not state.equipped or not inv or not inv.instances then
+        return 0, 0
+    end
+    local dt = 0
+    local dr = 0
+
+    local function AddArmor(instance_id)
+        local inst = inv.instances[instance_id]
+        if not inst then return end
+        local def = GetDef(inst.base_id)
+        if not def or def.category ~= "apparel" then return end
+        local scale = ArmorScaleFromCondition(inst.condition or def.cnd or 100)
+        if def.dt then dt = dt + (def.dt * scale) end
+        if def.dr then dr = dr + (def.dr * scale) end
+    end
+
+    AddArmor(state.equipped.armor_body_instance_id)
+    AddArmor(state.equipped.armor_head_instance_id)
+
+    return Round2(dt), Round2(dr)
+end
+
 function INV.CalcValue(def, condition)
     local base = def and def.value
     if base == nil then return nil end
@@ -254,6 +312,11 @@ function INV.CalcWeight(inv)
 end
 
 function INV.BuildPayload(state)
+    if state and SPECIAL and SPECIAL.Init then
+        if state.special == nil or state.carry_weight_max == nil then
+            SPECIAL.Init(state)
+        end
+    end
     local inv = INV.Normalize(state and state.inventory)
     local categories = { "weapons", "apparel", "aid", "ammo", "misc", "notes" }
     local items_by_category = { weapons = {}, apparel = {}, aid = {}, ammo = {}, misc = {}, notes = {} }
@@ -271,16 +334,29 @@ function INV.BuildPayload(state)
             local scaled = INV.CalcValue(def, cnd)
             if scaled ~= nil then value = scaled end
         end
+        local weight = def.wg or 0
+        local weight_int = RoundInt(weight)
+        local dps = CalcDps(def)
+        local vw = CalcVw(value, weight)
         return {
             item_id = inst.base_id,
             instance_id = instance_id,
             name = name,
             icon = def.icon,
+            item_icon = def.item_icon or def.icon,
             category = def.category,
             cnd = cnd,
             max_cnd = def.cnd or 100,
             value = value,
-            weight = def.wg or 0
+            weight = weight_int,
+            dps = dps,
+            vw = vw,
+            str = def.str,
+            deg = def.weapon and def.weapon.damage or nil,
+            pds = weight_int,
+            val = value,
+            other = def.ammo_type,
+            effects = def.effects or {}
         }
     end
 
@@ -305,6 +381,11 @@ function INV.BuildPayload(state)
             if scaled ~= nil then item_value = scaled end
         end
 
+        local weight = def.wg or 0
+        local weight_int = RoundInt(weight)
+        local dps = CalcDps(def)
+        local vw = CalcVw(item_value, weight)
+
         items_by_category[cat][#items_by_category[cat] + 1] = {
             item_id = entry.base_id,
             instance_id = entry.instance_id,
@@ -313,16 +394,37 @@ function INV.BuildPayload(state)
             stackable = entry.stackable,
             name = name,
             icon = def.icon,
+            item_icon = def.item_icon or def.icon,
             desc = def.desc,
             info = def.info,
             category = cat,
-            weight = def.wg or 0,
+            weight = weight_int,
             value = item_value,
             cnd = entry.condition or def.cnd,
             max_cnd = def.cnd or 100,
             equipped = entry.equipped or false,
-            actions = actions
+            actions = actions,
+            dps = dps,
+            vw = vw,
+            str = def.str,
+            deg = def.weapon and def.weapon.damage or nil,
+            pds = weight_int,
+            val = item_value,
+            other = def.ammo_type,
+            effects = def.effects or {}
         }
+    end
+
+    local pds_current = INV.CalcWeight(inv)
+    local pds_max = tonumber(state and state.carry_weight_max) or 0
+    local pds_current_int = RoundInt(pds_current)
+    local pds_max_int = RoundInt(pds_max)
+    local dt, dr = CalcArmorStats(state, inv)
+
+    if LOG and LOG.Info then
+        LOG.Info(string.format("[PDS] current=%s max=%s",
+            tostring(pds_current_int),
+            tostring(pds_max_int)))
     end
 
     return {
@@ -330,8 +432,14 @@ function INV.BuildPayload(state)
         categories = categories,
         items = items_by_category,
         carry_weight = {
-            current = INV.CalcWeight(inv),
-            max = state and state.carry_weight_max or 0
+            current = pds_current_int,
+            max = pds_max_int
+        },
+        player_stats = {
+            pds = { current = pds_current_int, max = pds_max_int },
+            dr = dr,
+            dt = dt,
+            xp = { now = 1000, max = 1000 }
         },
         special = state and state.special or nil,
         derived = {

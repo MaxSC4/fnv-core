@@ -8,6 +8,52 @@ local function ClampPct(value)
     return value
 end
 
+local function Round2(value)
+    if value == nil then return nil end
+    return math.floor((value * 100) + 0.5) / 100
+end
+
+local function RoundInt(value)
+    if value == nil then return nil end
+    return math.floor(tonumber(value) + 0.5)
+end
+
+local function ArmorScaleFromCondition(condition)
+    condition = tonumber(condition)
+    if condition == nil then return 1 end
+    if condition < 0 then condition = 0 end
+    if condition > 100 then condition = 100 end
+    local pct = condition / 100
+    local scaled = 0.66 + math.min((0.34 * pct) / 0.5, 0.34)
+    return math.max(0.66, math.min(1.0, scaled))
+end
+
+local function CalcArmorStats(state)
+    if not state or not state.equipped or not state.inventory then
+        return 0, 0
+    end
+    local inv = INV and INV.Normalize and INV.Normalize(state.inventory) or state.inventory
+    if not inv or not inv.instances then return 0, 0 end
+
+    local dt = 0
+    local dr = 0
+
+    local function AddArmor(instance_id)
+        local inst = inv.instances[instance_id]
+        if not inst then return end
+        local def = ITEMS and ITEMS.Get and ITEMS.Get(inst.base_id)
+        if not def or def.category ~= "apparel" then return end
+        local scale = ArmorScaleFromCondition(inst.condition or def.cnd or 100)
+        if def.dt then dt = dt + (def.dt * scale) end
+        if def.dr then dr = dr + (def.dr * scale) end
+    end
+
+    AddArmor(state.equipped.armor_body_instance_id)
+    AddArmor(state.equipped.armor_head_instance_id)
+
+    return Round2(dt), Round2(dr)
+end
+
 local function GetEquippedConditions(state)
     local out = {
         equip = { armor = false, weapon = false },
@@ -50,6 +96,12 @@ function HUD_SYNC.BuildState(player_state)
     local wallet = player_state and player_state.wallet
 
     local cnd_state = GetEquippedConditions(player_state)
+    local dt, dr = CalcArmorStats(player_state)
+    local pds_current = (INV and INV.CalcWeight and player_state and player_state.inventory)
+        and INV.CalcWeight(player_state.inventory) or 0
+    local pds_max = tonumber(player_state and player_state.carry_weight_max) or 0
+    local pds_current_int = RoundInt(pds_current)
+    local pds_max_int = RoundInt(pds_max)
 
     return {
         hp = hp,
@@ -64,6 +116,12 @@ function HUD_SYNC.BuildState(player_state)
         },
         equip = cnd_state.equip,
         cnd = cnd_state.cnd,
+        stats = {
+            pds = { current = pds_current_int, max = pds_max_int },
+            dr = dr,
+            dt = dt,
+            xp = { now = 1000, max = 1000 }
+        },
 
         money = {
             caps = wallet and (WALLET.Get(wallet, "caps") or 0) or 0,

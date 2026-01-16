@@ -1,6 +1,31 @@
 SHOP = {}
 SHOP.SESSIONS = SHOP.SESSIONS or {}
 
+local function Round2(value)
+    if value == nil then return nil end
+    return math.floor((value * 100) + 0.5) / 100
+end
+
+local function RoundInt(value)
+    if value == nil then return nil end
+    return math.floor(tonumber(value) + 0.5)
+end
+
+local function CalcDps(def)
+    if not def or not def.weapon then return nil end
+    local damage = tonumber(def.weapon.damage)
+    local cadence = tonumber(def.weapon.cadence)
+    if not damage or not cadence or cadence <= 0 then return nil end
+    return Round2(damage / cadence)
+end
+
+local function CalcVw(value, weight)
+    value = tonumber(value)
+    weight = tonumber(weight)
+    if not value or not weight or weight <= 0 then return nil end
+    return Round2(value / weight)
+end
+
 local function Log(msg)
     if LOG and LOG.Info then
         LOG.Info("[SHOP] " .. msg)
@@ -121,18 +146,31 @@ local function BuildVendorInventory(shop, mods)
         local stock_qty = GetStockQty(shop, item_id)
         local stock_cnd = GetStockCondition(shop, item_id)
         local unit = CalcConditionedPrice(base_price, stock_cnd, mods.buy_mult, def)
+        local weight = def and def.wg or 0
+        local weight_int = RoundInt(weight)
+        local dps = CalcDps(def)
+        local vw = CalcVw(unit, weight)
         list[#list + 1] = {
             item_id = item_id,
             name = def and def.name or item_id,
             desc = def and def.desc or nil,
             icon = def and def.icon or nil,
-            wg = def and def.wg or nil,
+            item_icon = def and (def.item_icon or def.icon) or nil,
+            wg = weight_int,
             cnd = stock_cnd ~= nil and stock_cnd or (def and def.cnd or nil),
             qty = stock_qty,
             stackable = IsStackable(def),
             max_stack = def and def.max_stack or nil,
             base_value = base_price,
-            unit_price = unit
+            unit_price = unit,
+            dps = dps,
+            vw = vw,
+            str = def and def.str or nil,
+            deg = def and def.weapon and def.weapon.damage or nil,
+            pds = weight_int,
+            val = unit,
+            ammo_type = def and def.ammo_type or nil,
+            effects = def and def.effects or {}
         }
     end
     return list
@@ -148,20 +186,33 @@ local function BuildPlayerInventory(state, shop, mods)
         local def = ITEMS and ITEMS.Get and ITEMS.Get(item_id)
         local base_price = shop.sell and shop.sell[item_id]
         local unit = CalcConditionedPrice(base_price, entry.condition, mods.sell_mult, def)
+        local weight = def and def.wg or 0
+        local weight_int = RoundInt(weight)
+        local dps = CalcDps(def)
+        local vw = CalcVw(unit, weight)
         list[#list + 1] = {
             item_id = item_id,
             instance_id = entry.instance_id,
             name = def and def.name or item_id,
             desc = def and def.desc or nil,
             icon = def and def.icon or nil,
-            wg = def and def.wg or nil,
+            item_icon = def and (def.item_icon or def.icon) or nil,
+            wg = weight_int,
             cnd = entry.condition or (def and def.cnd or nil),
             qty = entry.qty or 1,
             stackable = entry.stackable ~= false,
             max_stack = def and def.max_stack or nil,
             base_value = base_price,
             unit_price = unit,
-            can_sell = base_price ~= nil
+            can_sell = base_price ~= nil,
+            dps = dps,
+            vw = vw,
+            str = def and def.str or nil,
+            deg = def and def.weapon and def.weapon.damage or nil,
+            pds = weight_int,
+            val = unit,
+            ammo_type = def and def.ammo_type or nil,
+            effects = def and def.effects or {}
         }
     end
     return list
@@ -198,13 +249,26 @@ local function BuildCartList(cart, shop, mods, side)
             local mult = (side == "buy") and mods.buy_mult or mods.sell_mult
             local def = ITEMS and ITEMS.Get and ITEMS.Get(item_id)
             local unit = CalcConditionedPrice(base, (side == "buy") and GetStockCondition(shop, item_id) or nil, mult, def)
+            local weight = def and def.wg or 0
+            local weight_int = RoundInt(weight)
+            local dps = CalcDps(def)
+            local vw = CalcVw(unit, weight)
             out[#out + 1] = {
                 item_id = item_id,
                 name = def and def.name or item_id,
                 icon = def and def.icon or nil,
                 qty = qty,
                 unit_price = unit,
-                cnd = (side == "buy") and (GetStockCondition(shop, item_id) or (def and def.cnd or nil)) or (def and def.cnd or nil)
+                cnd = (side == "buy") and (GetStockCondition(shop, item_id) or (def and def.cnd or nil)) or (def and def.cnd or nil),
+                item_icon = def and (def.item_icon or def.icon) or nil,
+                dps = dps,
+                vw = vw,
+                str = def and def.str or nil,
+                deg = def and def.weapon and def.weapon.damage or nil,
+                pds = weight_int,
+                val = unit,
+                ammo_type = def and def.ammo_type or nil,
+                effects = def and def.effects or {}
             }
         end
     end

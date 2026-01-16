@@ -5,6 +5,14 @@ local function Key(player_id)
 end
 
 function INV_STORE.Load(player_id)
+    if not INV or not INV.Normalize then
+        return {
+            _version = 2,
+            stacks = {},
+            instances = {},
+            next_instance_id = 1
+        }
+    end
     local raw = PDATA.Get(Key(player_id))
     if type(raw) == "string" then
         local decoded = JSON.parse(raw)

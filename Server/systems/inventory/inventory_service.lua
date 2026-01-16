@@ -546,6 +546,12 @@ function INV_SERVICE.Open(player)
     if INV_SERVICE.SESSIONS[player] then return end
     local state = PLAYERS and PLAYERS.GetState and PLAYERS.GetState(player)
     if not state then return end
+    if not INV or not INV.BuildPayload then
+        if LOG and LOG.Warn then
+            LOG.Warn("INV not ready; ignoring inventory open request.")
+        end
+        return
+    end
 
     local payload = INV.BuildPayload(state)
     if not payload then return end

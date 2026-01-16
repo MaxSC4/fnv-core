@@ -6,7 +6,6 @@ Package.Require("Server/core/autosave.lua")
 -- PERSISTENCE
 Package.Require("Server/systems/persistence/package_data.lua")
 Package.Require("Server/systems/persistence/persistence.lua")
-Package.Require("Server/systems/persistence/player_state_store.lua")
 
 -- INVENTORY
 Package.Require("Server/systems/inventory/items_db.lua")
@@ -18,11 +17,13 @@ Package.Require("Server/systems/loot/loot_service.lua")
 Package.Require("Server/systems/loot/container_service.lua")
 Package.Require("Server/systems/loot/container_store.lua")
 
-
 -- ECONOMY / WALLET
 Package.Require("Server/systems/economy/currency_db.lua")
 Package.Require("Server/systems/economy/wallet.lua")
 Package.Require("Server/systems/economy/wallet_store.lua")
+
+-- PERSISTENCE (depends on inventory + wallet)
+Package.Require("Server/systems/persistence/player_state_store.lua")
 
 -- SHOPS
 Package.Require("Server/systems/shops/shop_db.lua")
@@ -127,6 +128,21 @@ local function SeedTestInventory(inv)
     INV.Add(inv, "ncr_beret", 1, { condition = 90 })
 end
 
+local function EnsureInventory(state)
+    if not state then return false end
+    if INV and INV.New then return true end
+    state.inventory = state.inventory or {
+        _version = 2,
+        stacks = {},
+        instances = {},
+        next_instance_id = 1
+    }
+    if LOG and LOG.Warn then
+        LOG.Warn("INV not ready during Load; skipping inventory seed.")
+    end
+    return false
+end
+
 -- ------------------------------------------------------------
 -- Reload-safe: quand le package (re)charge, respawn les joueurs connectés
 -- ------------------------------------------------------------
@@ -147,7 +163,7 @@ Package.Subscribe("Load", function()
         end
 
         -- Dev: ajoute quelques items pour tester l'inventaire
-        if state and state.inventory then
+        if state and state.inventory and EnsureInventory(state) then
             if DEV_RESET_INVENTORY then
                 state.inventory = INV.New()
                 SeedTestInventory(state.inventory)

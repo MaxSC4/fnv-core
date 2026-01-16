@@ -47,6 +47,15 @@ local function FreezePlayerForInventory(player, freeze)
 end
 
 local function SendOpen(player, payload)
+    if JSON and JSON.stringify and JSON.parse then
+        local ok, encoded = pcall(JSON.stringify, payload)
+        if ok and encoded then
+            local decoded = JSON.parse(encoded)
+            if decoded then
+                payload = decoded
+            end
+        end
+    end
     Events.CallRemote("FNV:Inv:Open", player, payload)
 end
 

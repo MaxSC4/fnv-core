@@ -21,25 +21,41 @@ local function ArmorScaleFromCondition(condition)
 end
 
 local function GetEquippedArmor(state)
-    if not state or not state.equipped or not state.inventory then return nil, nil end
+    if not state or not state.equipped or not state.inventory then return {} end
     local inv = INV and INV.Normalize and INV.Normalize(state.inventory) or state.inventory
-    if not inv or not inv.instances then return nil, nil end
-    local armor_id = state.equipped.armor_body_instance_id or state.equipped.armor_head_instance_id
-    if not armor_id then return nil, nil end
-    local inst = inv.instances[armor_id]
-    if not inst then return nil, nil end
-    local def = ITEMS and ITEMS.Get and ITEMS.Get(inst.base_id)
-    if not def or def.category ~= "apparel" then return nil, nil end
-    return inst, def
+    if not inv or not inv.instances then return {} end
+    local out = {}
+
+    local function AddArmor(instance_id)
+        if not instance_id then return end
+        local inst = inv.instances[instance_id]
+        if not inst then return end
+        local def = ITEMS and ITEMS.Get and ITEMS.Get(inst.base_id)
+        if not def or def.category ~= "apparel" then return end
+        out[#out + 1] = { inst = inst, def = def }
+    end
+
+    AddArmor(state.equipped.armor_body_instance_id)
+    AddArmor(state.equipped.armor_head_instance_id)
+
+    return out
 end
 
 local function CalcArmorDT(state)
-    local inst, def = GetEquippedArmor(state)
-    if not inst or not def then return 0 end
-    local base = tonumber(def.dt or def.dr or 0) or 0
-    if base <= 0 then return 0 end
-    local scale = ArmorScaleFromCondition(inst.condition or def.cnd or 100)
-    return base * scale, inst, def
+    local armors = GetEquippedArmor(state)
+    local total = 0
+    for _, entry in ipairs(armors) do
+        local base = tonumber(entry.def.dt or 0) or 0
+        if base > 0 then
+            local scale = ArmorScaleFromCondition(entry.inst.condition or entry.def.cnd or 100)
+            local dt = base * scale
+            entry.dt = dt
+            total = total + dt
+        else
+            entry.dt = 0
+        end
+    end
+    return total, armors
 end
 
 local function SaveInventoryState(player, state)
@@ -194,21 +210,29 @@ function HP.ApplyIncomingDamage(player, state, amount)
     local dmg = tonumber(amount) or 0
     if dmg <= 0 then return 0 end
 
-    local dt, armor_inst, armor_def = CalcArmorDT(state)
-    local effective = dmg
-    if dt and dt > 0 then
-        effective = dmg - dt
-        if effective < 0 then effective = 0 end
+    local dt, armors = CalcArmorDT(state)
+    local minimum = dmg * 0.2
+    local effective = dmg - (dt or 0)
+    if effective < minimum then
+        effective = minimum
     end
 
-    if armor_inst and dmg > (dt or 0) then
-        armor_inst.condition = ClampCondition((armor_inst.condition or 100) - 0.2)
-        if LOG and LOG.Info then
-            LOG.Info(string.format("[CND] armor=%s instance=%s cnd=%.2f",
-                tostring(armor_def and armor_def.name or armor_def and armor_def.id or "armor"),
-                tostring(armor_inst.id),
-                tonumber(armor_inst.condition) or 0))
+    local degraded = false
+    if armors and #armors > 0 then
+        for _, entry in ipairs(armors) do
+            if dmg > (entry.dt or 0) then
+                entry.inst.condition = ClampCondition((entry.inst.condition or 100) - 0.2)
+                degraded = true
+                if LOG and LOG.Info then
+                    LOG.Info(string.format("[CND] armor=%s instance=%s cnd=%.2f",
+                        tostring(entry.def and entry.def.name or entry.def and entry.def.id or "armor"),
+                        tostring(entry.inst.id),
+                        tonumber(entry.inst.condition) or 0))
+                end
+            end
         end
+    end
+    if degraded then
         local now = os.clock()
         if not state._armor_save_t or (now - state._armor_save_t) > 2.0 then
             state._armor_save_t = now

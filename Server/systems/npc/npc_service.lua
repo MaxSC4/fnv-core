@@ -86,7 +86,17 @@ end
 function NPC.BroadcastUpdate(npc_id)
     local data = npc_id and NPC.List[npc_id]
     if not data then return end
-    local payload = BuildNPCPayload(npc_id, data, false)
+    local payload = BuildNPCPayload(npc_id, data, true)
+    if LOG and LOG.Info then
+        LOG.Info(string.format("[NPC] Update id=%s hostile=%s hp=%s/%s loc=%s,%s,%s",
+            tostring(payload.id),
+            tostring(payload.hostile),
+            tostring(payload.hp),
+            tostring(payload.hp_max),
+            tostring(payload.x),
+            tostring(payload.y),
+            tostring(payload.z)))
+    end
     for _, player in pairs(Player.GetAll()) do
         Events.CallRemote("FNV:NPC:Update", player, payload)
     end

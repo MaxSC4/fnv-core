@@ -438,6 +438,7 @@ local function SendEnemyTarget(visible, name, hp_pct, id)
             name = name or "Enemy",
             hp_pct = hp_pct or 0
         }
+        print(string.format("[FNV] HUD:EnemyTarget visible name=%s hp_pct=%s", tostring(next.name), tostring(next.hp_pct)))
         if last_enemy_target.visible == true
             and last_enemy_target.id == id
             and last_enemy_target.hp_pct == next.hp_pct
@@ -453,6 +454,7 @@ local function SendEnemyTarget(visible, name, hp_pct, id)
     if last_enemy_target.visible == false then
         return
     end
+    print("[FNV] HUD:EnemyTarget hidden")
     last_enemy_target = { visible = false, id = nil, hp_pct = nil, name = nil }
     pending_enemy_target = { visible = false }
     FlushPending()
@@ -665,10 +667,21 @@ Events.SubscribeRemote("FNV:NPC:Update", function(payload)
     if not id then return end
     NPCS[id] = NPCS[id] or { name = payload.name or id }
     local npc = NPCS[id]
+    print(string.format("[FNV] NPC:Update id=%s hostile=%s hp=%s/%s loc=%s,%s,%s",
+        tostring(id),
+        tostring(payload.hostile),
+        tostring(payload.hp),
+        tostring(payload.hp_max),
+        tostring(payload.x),
+        tostring(payload.y),
+        tostring(payload.z)))
     if payload.name then npc.name = payload.name end
     if payload.hostile ~= nil then npc.hostile = payload.hostile == true end
     if payload.hp ~= nil then npc.hp = tonumber(payload.hp) or 0 end
     if payload.hp_max ~= nil then npc.hp_max = tonumber(payload.hp_max) or 100 end
+    if payload.x and payload.y and payload.z then
+        npc.loc = Vector(payload.x, payload.y, payload.z)
+    end
 end)
 
 Events.SubscribeRemote("FNV:Loot:List", function(payload)

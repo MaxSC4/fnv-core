@@ -140,12 +140,18 @@ function NACT_TEST.Start()
     NACT_TEST.npc = npc
 
     if NPC and NPC.Register then
-        NPC.Register(NPC_ID, npc, "Raider")
+        NPC.Register(NPC_ID, npc, "Tauma le Tox")
         local data = NPC.List and NPC.List[NPC_ID]
         if data then
             data.hp = 250
             data.max_hp = 250
             data.dt = 8
+        end
+        if LOG and LOG.Info then
+            LOG.Info(string.format("[NACT_TEST] Registered npc=%s hp=%s dt=%s",
+                tostring(NPC_ID),
+                tostring(data and data.hp),
+                tostring(data and data.dt)))
         end
         if NPC.SetHostile then
             NPC.SetHostile(NPC_ID, true)
@@ -154,6 +160,22 @@ function NACT_TEST.Start()
             NPC.AttachDebugHP(NPC_ID, 250, data and data.dt or 0)
         end
     end
+
+    if NACT_TEST.update_timer then
+        Timer.ClearInterval(NACT_TEST.update_timer)
+    end
+    NACT_TEST.update_timer = Timer.SetInterval(function()
+        if not NACT_TEST.npc or not NACT_TEST.npc.IsValid or not NACT_TEST.npc:IsValid() then
+            if NACT_TEST.update_timer then
+                Timer.ClearInterval(NACT_TEST.update_timer)
+                NACT_TEST.update_timer = nil
+            end
+            return
+        end
+        if NPC and NPC.BroadcastUpdate then
+            NPC.BroadcastUpdate(NPC_ID)
+        end
+    end, 250)
 end
 
 function NACT_TEST.Stop()
@@ -167,5 +189,9 @@ function NACT_TEST.Stop()
     NACT_TEST.npc = nil
     if NPC and NPC.Unregister then
         NPC.Unregister(NPC_ID)
+    end
+    if NACT_TEST.update_timer then
+        Timer.ClearInterval(NACT_TEST.update_timer)
+        NACT_TEST.update_timer = nil
     end
 end

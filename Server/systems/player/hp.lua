@@ -58,6 +58,59 @@ local function CalcArmorDT(state)
     return total, armors
 end
 
+local function GetMetaNumber(meta, key, default)
+    if not meta then return default end
+    local val = meta[key]
+    if val == nil then return default end
+    val = tonumber(val)
+    if val == nil then return default end
+    return val
+end
+
+local function ComputeDamage(amount, dt, meta)
+    local dmg = tonumber(amount) or 0
+    if dmg <= 0 then return 0, 0, 0 end
+
+    if not meta then
+        local minimum = dmg * 0.2
+        local reduced = dmg - (dt or 0)
+        if reduced < minimum then
+            reduced = minimum
+        end
+        if reduced < 0 then reduced = 0 end
+        return reduced, dmg, dt or 0
+    end
+
+    local base = GetMetaNumber(meta, "dmg", dmg)
+    local skill = GetMetaNumber(meta, "skill", 1)
+    local cond = GetMetaNumber(meta, "cond", 1)
+    local power = GetMetaNumber(meta, "power", 1)
+    local bonus = GetMetaNumber(meta, "bonus", 0)
+    local special = GetMetaNumber(meta, "special", 1)
+    local crit_dmg = GetMetaNumber(meta, "crit_dmg", 0)
+    local crit_perks = GetMetaNumber(meta, "crit_perks", 1)
+    local is_crit = meta.is_crit == true and 1 or 0
+
+    local dam = (base * skill * cond * power) + bonus
+    local dam_adjusted1 = (dam * special) + (is_crit * crit_dmg * crit_perks)
+
+    local ammo_dt_mult = GetMetaNumber(meta, "ammo_dt_mult", 1)
+    local ammo_dt = GetMetaNumber(meta, "ammo_dt", 0)
+    local dt_adjusted = math.max(0, (dt or 0) * ammo_dt_mult - ammo_dt)
+
+    local dam_adjusted2 = math.max(dam_adjusted1 * 0.2, dam_adjusted1 - dt_adjusted)
+
+    local sneak_mult = GetMetaNumber(meta, "sneak_mult", 1)
+    local loc_mult = GetMetaNumber(meta, "loc_mult", 1)
+    local ammo_mult = GetMetaNumber(meta, "ammo_mult", 1)
+    local difficulty_mult = GetMetaNumber(meta, "difficulty_mult", 1)
+    local perk_mult = GetMetaNumber(meta, "perk_mult", 1)
+    local chem_mult = GetMetaNumber(meta, "chem_mult", 1)
+
+    local final = dam_adjusted2 * sneak_mult * loc_mult * ammo_mult * difficulty_mult * perk_mult * chem_mult
+    return final, dam_adjusted1, dt_adjusted
+end
+
 local function SaveInventoryState(player, state)
     local player_id = PLAYERS and PLAYERS.GetID and PLAYERS.GetID(player)
     if not player_id or not state or not state.inventory then return end
@@ -205,22 +258,21 @@ local function StartHealingRate(player, state)
     end, HEALING_RATE_TICK_MS)
 end
 
-function HP.ApplyIncomingDamage(player, state, amount)
+function HP.ApplyIncomingDamage(player, state, amount, meta)
     if not state then return 0 end
     local dmg = tonumber(amount) or 0
     if dmg <= 0 then return 0 end
 
     local dt, armors = CalcArmorDT(state)
-    local minimum = dmg * 0.2
-    local effective = dmg - (dt or 0)
-    if effective < minimum then
-        effective = minimum
-    end
+    local effective, dam_adjusted1 = ComputeDamage(dmg, dt, meta)
 
     local degraded = false
     if armors and #armors > 0 then
+        local ammo_dt_mult = GetMetaNumber(meta, "ammo_dt_mult", 1)
+        local ammo_dt = GetMetaNumber(meta, "ammo_dt", 0)
         for _, entry in ipairs(armors) do
-            if dmg > (entry.dt or 0) then
+            local entry_dt = math.max(0, (entry.dt or 0) * ammo_dt_mult - ammo_dt)
+            if dam_adjusted1 > entry_dt then
                 entry.inst.condition = ClampCondition((entry.inst.condition or 100) - 0.2)
                 degraded = true
                 if LOG and LOG.Info then

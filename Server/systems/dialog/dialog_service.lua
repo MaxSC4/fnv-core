@@ -1,5 +1,32 @@
 DIALOG = DIALOG or {}
-DIALOG.SESSIONS = DIALOG.SESSIONS or {} -- player -> { npc_id, node_id }
+DIALOG.SESSIONS = DIALOG.SESSIONS or {}
+DIALOG._PARLEY_READY = DIALOG._PARLEY_READY or false
+
+local Parley = require("parley/Shared/parley/core.lua")
+
+local function LogInfo(msg)
+    if LOG and LOG.Info then
+        LOG.Info(msg)
+    else
+        Console.Log(msg)
+    end
+end
+
+local function LogWarn(msg)
+    if LOG and LOG.Warn then
+        LOG.Warn(msg)
+    else
+        Console.Log(msg)
+    end
+end
+
+local function LogError(msg)
+    if LOG and LOG.Error then
+        LOG.Error(msg)
+    else
+        Console.Log(msg)
+    end
+end
 
 local function LookAtRotation(from, to)
     local dx = to.X - from.X
@@ -7,7 +34,7 @@ local function LookAtRotation(from, to)
     local dz = to.Z - from.Z
 
     local yaw = math.deg(math.atan(dy, dx))
-    local dist_xy = math.sqrt(dx*dx + dy*dy)
+    local dist_xy = math.sqrt(dx * dx + dy * dy)
     if dist_xy < 0.001 then dist_xy = 0.001 end
     local pitch = -math.deg(math.atan(dz, dist_xy))
     return Rotator(pitch, yaw, 0)
@@ -16,14 +43,7 @@ end
 local function FreezePlayerForDialog(player, freeze)
     local char = player:GetControlledCharacter()
     if not char or not char:IsValid() then return end
-
-    -- bloque le déplacement / actions côté gameplay (server autoritaire)
     char:SetInputEnabled(not freeze)
-
-    -- optionnel (si dispo dans ton autocomplete Nanos)
-    -- char:SetCanAim(not freeze)
-    -- char:SetCanPunch(not freeze)
-    -- char:SetCanSprint(not freeze)
 end
 
 local function ForcePlayerCameraMode(player, mode)
@@ -50,7 +70,6 @@ local function FaceNPCToPlayer(npc_char, player)
     local pchar = player:GetControlledCharacter()
     if not pchar or not pchar:IsValid() then return end
     if not npc_char or not npc_char:IsValid() then return end
-
     npc_char:LookAt(pchar:GetLocation())
 end
 
@@ -154,44 +173,28 @@ local function Open(player, payload)
     Events.CallRemote("FNV:Dialog:Open", player, payload)
 end
 
-local function Close(player, mode_override)
+local function CloseInternal(player, mode_override)
     local sess = DIALOG.SESSIONS[player]
-    if sess then
-        local npc_char = NPC and NPC.List and NPC.List[sess.npc_id] and NPC.List[sess.npc_id].character
-        ScheduleNPCReset(npc_char, sess.npc_original_rot, 350)
-        RestorePlayerCameraMode(player, sess.camera_mode)
-    end
+    if not sess or sess.closed then return end
+    sess.closed = true
+
+    local npc_char = NPC and NPC.List and NPC.List[sess.npc_id] and NPC.List[sess.npc_id].character
+    ScheduleNPCReset(npc_char, sess.npc_original_rot, 350)
+    RestorePlayerCameraMode(player, sess.camera_mode)
 
     DIALOG.SESSIONS[player] = nil
 
     FreezePlayerForDialog(player, false)
-
     Events.CallRemote("FNV:Dialog:Close", player, { open = false })
     SetMode(player, mode_override or "gameplay")
-end
 
-local function GetSeen(player)
-    local st = PLAYERS.GetState(player)
-    if not st then return nil end
-    st.dialog_seen = st.dialog_seen or {}
-    return st.dialog_seen
-end
-
-local function SeenKey(node_id, option_id)
-    return tostring(node_id) .. ":" .. tostring(option_id)
-end
-
-local function IsSeen(player, npc_id, node_id, option_id)
-    local seen = GetSeen(player)
-    if not seen or not seen[npc_id] then return false end
-    return seen[npc_id][SeenKey(node_id, option_id)] == true
-end
-
-local function MarkSeen(player, npc_id, node_id, option_id)
-    local seen = GetSeen(player)
-    if not seen then return end
-    seen[npc_id] = seen[npc_id] or {}
-    seen[npc_id][SeenKey(node_id, option_id)] = true
+    if sess.pending_shop_id and SHOP and SHOP.Open then
+        local shop_id = sess.pending_shop_id
+        local selected = sess.pending_shop_selected
+        Timer.SetTimeout(function()
+            SHOP.Open(player, shop_id, selected)
+        end, 0)
+    end
 end
 
 local function IsNearNPC(player, npc_id, range)
@@ -207,46 +210,201 @@ local function IsNearNPC(player, npc_id, range)
     local dx = ppos.X - npos.X
     local dy = ppos.Y - npos.Y
     local dz = ppos.Z - npos.Z
-    return (dx*dx + dy*dy + dz*dz) <= (range*range)
+    return (dx * dx + dy * dy + dz * dz) <= (range * range)
 end
 
-local function BuildPayload(player, npc_id, node_id)
-    local npc_def = DIALOG_DB.GetNPC(npc_id)
-    if not npc_def then return nil end
+local function ParseAction(action)
+    if type(action) ~= "string" then return nil, nil end
+    action = action:gsub("^%s+", ""):gsub("%s+$", "")
+    action = action:gsub("^set%s+", "")
+    local cmd, rest = action:match("^(%S+)%s*(.*)$")
+    return cmd, rest
+end
 
-    local node = npc_def.nodes[node_id]
-    if not node then return nil end
+function DIALOG.ApplyAction(player, action)
+    local sess = DIALOG.SESSIONS[player]
+    if not action or not sess then return end
 
-    local opts = {}
-    for _, opt in ipairs(node.options or {}) do
-        opts[#opts+1] = {
-            id = opt.id,
-            text = opt.text,
-            used = IsSeen(player, npc_id, node_id, opt.id),
-            disabled = opt.disabled or false,
-            close = opt.close or false,
-            action = opt.action,
-        }
+    local cmd, rest = ParseAction(action)
+    if not cmd then return end
+
+    if cmd == "open_shop" and rest and rest ~= "" then
+        sess.pending_shop_id = rest
+        return
     end
 
+    if cmd == "reputation" then
+        local op, amount = rest:match("^([%+%-]=)%s*(-?%d+)$")
+        if op and amount then
+            local current = player:GetValue("rep") or 0
+            local delta = tonumber(amount) or 0
+            if op == "+=" then
+                current = current + delta
+            else
+                current = current - delta
+            end
+            player:SetValue("rep", current)
+            return
+        end
+        local value = rest:match("^=%s*(-?%d+)$")
+        if value then
+            player:SetValue("rep", tonumber(value) or 0)
+            return
+        end
+    end
+
+    if LOG and LOG.Warn then
+        LOG.Warn("[DIALOG] Unhandled action: " .. tostring(action))
+    else
+        LogWarn("[DIALOG] Unhandled action: " .. tostring(action))
+    end
+end
+
+local function BuildPayloadForSession(sess, line, options)
+    if not sess then return nil end
+    local npc_name = sess.npc_name
+    if line and line.speaker and line.speaker ~= "" then
+        npc_name = line.speaker
+    end
+    local text = line and line.text or nil
     return {
         open = true,
-        npc = { id = npc_id, name = npc_def.name or npc_id },
-        node = { id = node_id, text = node.text },
-        options = opts,
-        selected = 0, -- 0-based
+        npc = { id = sess.npc_id, name = npc_name or sess.npc_id },
+        node = { id = sess.node_id, text = text },
+        options = options or {},
+        selected = 0,
         can_close = true
     }
 end
 
+local function EnsureParley()
+    if DIALOG._PARLEY_READY then return end
+
+    Parley.RegisterStateProvider(function(player)
+        return {
+            get = function(_, path)
+                if path == "player.name" then
+                    return player:GetName()
+                end
+                if path == "player.reputation" then
+                    return player:GetValue("rep") or 0
+                end
+                return nil
+            end,
+            apply = function(_, action)
+                DIALOG.ApplyAction(player, action)
+            end
+        }
+    end)
+
+    Parley.SetUIAdapter({
+        show_line = function(player, line, session)
+            local sess = DIALOG.SESSIONS[player]
+            if not sess then return end
+            if sess.session_id == nil then
+                sess.session_id = session.id
+            elseif sess.session_id ~= session.id then
+                return
+            end
+            sess.node_id = tostring(session.id)
+            sess.last_line = line
+            sess.last_choices = nil
+            LogInfo(string.format("[DIALOG] Parley line npc=%s session=%s", tostring(sess.npc_id), tostring(session.id)))
+            local options = {}
+            if not sess.last_choices or #sess.last_choices == 0 then
+                options[1] = { id = "next", text = "Continuer", used = false, disabled = false, close = false }
+            end
+            Open(player, BuildPayloadForSession(sess, line, options))
+        end,
+        show_choices = function(player, choices, session)
+            local sess = DIALOG.SESSIONS[player]
+            if not sess then return end
+            if sess.session_id == nil then
+                sess.session_id = session.id
+            elseif sess.session_id ~= session.id then
+                return
+            end
+            sess.node_id = tostring(session.id)
+            sess.last_choices = choices or {}
+            LogInfo(string.format("[DIALOG] Parley choices npc=%s session=%s count=%d", tostring(sess.npc_id), tostring(session.id), #sess.last_choices))
+            local options = {}
+            for _, choice in ipairs(sess.last_choices) do
+                options[#options + 1] = {
+                    id = choice.id,
+                    text = choice.text,
+                    used = false,
+                    disabled = false,
+                    close = false
+                }
+            end
+            Open(player, BuildPayloadForSession(sess, sess.last_line, options))
+        end,
+        hide = function(player, session)
+            local sess = DIALOG.SESSIONS[player]
+            if not sess then return end
+            if sess.session_id == nil then
+                sess.session_id = session.id
+            elseif sess.session_id ~= session.id then
+                return
+            end
+            CloseInternal(player, "gameplay")
+        end
+    })
+
+    DIALOG._PARLEY_READY = true
+end
+
+local function LoadAsset(npc_def, npc_id)
+    if not npc_def then return nil end
+    if npc_def._asset then return npc_def._asset end
+    local ok_file, file_or_err = pcall(File, npc_def.file)
+    if not ok_file or not file_or_err then
+        LogError("[DIALOG] Parley file open failed: " .. tostring(file_or_err))
+        return nil
+    end
+    local ok_read, text_or_err = pcall(function()
+        return file_or_err:Read()
+    end)
+    if not ok_read or not text_or_err then
+        LogError("[DIALOG] Parley file read failed: " .. tostring(text_or_err))
+        return nil
+    end
+    local ok, asset_or_err = pcall(Parley.Load, text_or_err, {
+        id = npc_id,
+        cache = true,
+        is_string = true,
+        file = npc_def.file
+    })
+    if not ok then
+        LogError("[DIALOG] Parley load failed: " .. tostring(asset_or_err))
+        return nil
+    end
+    npc_def._asset = asset_or_err
+    return npc_def._asset
+end
+
 function DIALOG.Start(player, npc_id)
-    if DIALOG.SESSIONS[player] then return end -- déjà en dialogue
-    if not IsNearNPC(player, npc_id, 350) then return end
+    EnsureParley()
+    if DIALOG.SESSIONS[player] or Parley.IsRunning(player) then
+        LogWarn("[DIALOG] Start ignored: session already running")
+        return
+    end
+    if not IsNearNPC(player, npc_id, 350) then
+        LogWarn("[DIALOG] Start ignored: not near npc_id=" .. tostring(npc_id))
+        return
+    end
 
     local npc_def = DIALOG_DB.GetNPC(npc_id)
-    if not npc_def then return end
+    if not npc_def then
+        LogWarn("[DIALOG] Start ignored: missing npc_def for npc_id=" .. tostring(npc_id))
+        return
+    end
 
-    local node_id = npc_def.start or "root"
+    local asset = LoadAsset(npc_def, npc_id)
+    if not asset then
+        LogError("[DIALOG] Start failed: asset not loaded for npc_id=" .. tostring(npc_id))
+        return
+    end
 
     local npc_char = NPC and NPC.List and NPC.List[npc_id] and NPC.List[npc_id].character
 
@@ -255,35 +413,49 @@ function DIALOG.Start(player, npc_id)
         npc_original_rot = npc_char:GetRotation()
     end
 
-    DIALOG.SESSIONS[player] = { 
-        npc_id = npc_id, 
-        node_id = node_id,
+    DIALOG.SESSIONS[player] = {
+        npc_id = npc_id,
+        npc_name = npc_def.name or npc_id,
         npc_original_rot = npc_original_rot,
         last_face_time = os.clock(),
-        camera_mode = ForcePlayerCameraMode(player, CameraMode.FPSOnly)
+        camera_mode = ForcePlayerCameraMode(player, CameraMode.FPSOnly),
+        node_id = "start",
+        session_id = nil,
+        last_line = nil,
+        last_choices = nil,
+        pending_shop_id = nil,
+        pending_shop_selected = nil,
+        closed = false
     }
 
-    -- 1) le PNJ se tourne vers le joueur
     if npc_char then
         FaceNPCToPlayer(npc_char, player)
     end
 
-    -- 2) on bloque les inputs gameplay (déplacement etc)
     FreezePlayerForDialog(player, true)
-
-    -- 3) on passe en mode dialog (ça va aussi activer souris côté client)
     SetMode(player, "dialog")
 
-    -- 4) on “snap” la caméra vers le PNJ
     if npc_char then
         SnapCameraToNPC(player, npc_char)
     end
 
-    -- 5) ouvre le dialogue
-    local payload = BuildPayload(player, npc_id, node_id)
-    Open(player, payload)
-end
+    local session_id = Parley.Start(player, asset, {
+        entry = npc_def.entry or "start",
+        context = { npc_id = npc_id },
+        on_end = function(_, reason)
+            local sess = DIALOG.SESSIONS[player]
+            if sess then
+                LogInfo("[DIALOG] Parley end reason=" .. tostring(reason))
+            end
+        end
+    })
 
+    local sess = DIALOG.SESSIONS[player]
+    if sess then
+        sess.session_id = session_id
+        sess.node_id = tostring(session_id)
+    end
+end
 
 Events.SubscribeRemote("FNV:Dialog:Choose", function(player, payload)
     local s = DIALOG.SESSIONS[player]
@@ -293,76 +465,28 @@ Events.SubscribeRemote("FNV:Dialog:Choose", function(player, payload)
     local node_id = payload and payload.node_id
     local option_id = payload and payload.option_id
 
-    if npc_id ~= s.npc_id or node_id ~= s.node_id then
-        return Close(player)
+    if npc_id ~= s.npc_id or tostring(node_id) ~= tostring(s.node_id) then
+        return CloseInternal(player)
     end
 
     if not IsNearNPC(player, npc_id, 350) then
-        return Close(player)
+        return CloseInternal(player)
     end
 
-    local npc_def = DIALOG_DB.GetNPC(npc_id)
-    local node = npc_def and npc_def.nodes and npc_def.nodes[node_id]
-    if not node then
-        return Close(player)
+    if option_id == "next" then
+        return Parley.Continue(player, s.session_id)
     end
 
-    local chosen = nil
-    for _, opt in ipairs(node.options or {}) do
-        if opt.id == option_id then chosen = opt break end
+    local choice_id = tonumber(option_id)
+    if choice_id then
+        return Parley.SelectChoice(player, s.session_id, choice_id)
     end
-    if not chosen or chosen.disabled then return end
-
-    MarkSeen(player, npc_id, node_id, option_id)
-
-    if chosen.close then
-        return Close(player)
-    end
-
-    if chosen.next then
-        s.node_id = chosen.next
-        return Open(player, BuildPayload(player, npc_id, s.node_id))
-    end
-
-    if chosen.action then
-        if DIALOG_ACTIONS and DIALOG_ACTIONS.Run then
-            local result = DIALOG_ACTIONS.Run(player, chosen) or {}
-            if result.close then
-                Close(player, result.mode)
-                if result.shop_id and SHOP and SHOP.Open then
-                    local ok = SHOP.Open(player, result.shop_id, result.selected)
-                    if not ok and result.mode == "shop" then
-                        Events.CallRemote("FNV:UI:SetMode", player, { mode = "gameplay" })
-                    end
-                end
-                return
-            end
-            if result.shop_id and SHOP and SHOP.Open then
-                SHOP.Open(player, result.shop_id, result.selected)
-            end
-            if result.next then
-                s.node_id = result.next
-                return Open(player, BuildPayload(player, npc_id, s.node_id))
-            end
-            if result.refresh ~= false then
-                return Open(player, BuildPayload(player, npc_id, s.node_id))
-            end
-            return
-        else
-            if LOG and LOG.Warn then
-                LOG.Warn("[DIALOG] Missing DIALOG_ACTIONS for action=" .. tostring(chosen.action))
-            end
-        end
-    end
-
-    -- fallback
-    Close(player)
 end)
 
 Events.SubscribeRemote("FNV:Dialog:CloseRequest", function(player, payload)
     local s = DIALOG.SESSIONS[player]
     if not s then return end
-    Close(player)
+    Parley.Stop(player, s.session_id, "close_request")
 end)
 
 Player.Subscribe("Destroy", function(player)
@@ -392,8 +516,3 @@ Timer.SetInterval(function()
         end
     end
 end, 250)
-
-
-
-
-

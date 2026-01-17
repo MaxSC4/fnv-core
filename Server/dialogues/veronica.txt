@@ -1,0 +1,39 @@
+start:
+Veronica: Hé, {{player.name}}. T’es pas d’ici, pas vrai ?
+- Qui es-tu ? -> who
+- J’ai besoin d’acheter. -> trade
+- Tu as des infos ? -> info
+- Au revoir. -> end
+
+who:
+Veronica: Je m’appelle Veronica. Disons que je connais un peu les environs.
+goto begin
+
+begin:
+Veronica: Tu cherches quoi, exactement ?
+if player.reputation >= 2: - On se connaît déjà. -> trusted
+- Je suis nouveau dans le coin. -> newcomer
+- Je peux donner un coup de main. -> help
+- Je veux marchander. -> trade
+- Rien pour l’instant. -> end
+
+trusted:
+Veronica: Ah, toi. Ça fait plaisir de te voir en un seul morceau.
+end
+
+newcomer:
+Veronica: Tout le monde commence quelque part. Reste en vie, c’est déjà bien.
+end
+
+help:
+Veronica: J’ai un petit coup de pouce pour les gens motivés.
+do reputation += 1
+goto begin
+
+trade:
+do open_shop veronica_shop
+end
+
+info:
+Veronica: Les caravanes passent rarement intactes. Évite les routes la nuit.
+goto begin

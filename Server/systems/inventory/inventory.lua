@@ -68,6 +68,20 @@ local function ClampCondition(condition)
     return condition
 end
 
+local function ResolveCondition(def, condition)
+    if not def then return nil, nil end
+    if def.category == "weapons" or def.category == "apparel" then
+        local max_cnd = def.cnd or 100
+        local cnd = ClampCondition(condition or max_cnd) or max_cnd
+        return cnd, max_cnd
+    end
+    if condition ~= nil or def.cnd ~= nil then
+        local max_cnd = def.cnd or 100
+        return ClampCondition(condition or def.cnd), max_cnd
+    end
+    return nil, nil
+end
+
 local function Round2(value)
     if value == nil then return nil end
     return math.floor((value * 100) + 0.5) / 100
@@ -345,7 +359,7 @@ function INV.BuildPayload(state)
         if not inst then return nil end
         local def = GetDef(inst.base_id) or {}
         local name = inst.custom_name or def.name or inst.base_id
-        local cnd = inst.condition or def.cnd
+        local cnd, max_cnd = ResolveCondition(def, inst.condition)
         local value = def.value or 0
         if cnd ~= nil and INV.CalcValue then
             local scaled = INV.CalcValue(def, cnd)
@@ -366,7 +380,7 @@ function INV.BuildPayload(state)
             item_icon = def.item_icon or def.icon,
             category = def.category,
             cnd = cnd,
-            max_cnd = def.cnd or 100,
+            max_cnd = max_cnd,
             value = value,
             weight = weight_int,
             dps = dps,
@@ -410,6 +424,7 @@ function INV.BuildPayload(state)
         local ammo_mag = def.weapon and def.weapon.ammo or nil
         local ammo_reserve = def.weapon and GetAmmoReserve(inv, def.weapon.ammo_type) or nil
         local other = GetOtherLabel(def)
+        local cnd, max_cnd = ResolveCondition(def, entry.condition)
 
         items_by_category[cat][#items_by_category[cat] + 1] = {
             item_id = entry.base_id,
@@ -425,8 +440,8 @@ function INV.BuildPayload(state)
             category = cat,
             weight = weight_int,
             value = item_value,
-            cnd = entry.condition or def.cnd,
-            max_cnd = def.cnd or 100,
+            cnd = cnd,
+            max_cnd = max_cnd,
             equipped = entry.equipped or false,
             actions = actions,
             dps = dps,

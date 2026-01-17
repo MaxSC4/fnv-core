@@ -46,7 +46,6 @@ Package.Require("Server/systems/admin/commands.lua")
 
 -- NPC
 Package.Require("Server/systems/npc/npc_service.lua")
-Package.Require("Server/systems/npc/pawn_test.lua")
 
 -- DIALOG
 Package.Require("Server/systems/dialog/dialog_db.lua")

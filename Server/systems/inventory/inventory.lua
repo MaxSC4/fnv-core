@@ -126,6 +126,16 @@ local function CalcArmorStats(state, inv)
     return Round2(dt), Round2(dr)
 end
 
+local function GetAmmoReserve(inv, ammo_item_id)
+    if not ammo_item_id or not INV or not INV.Count then return nil end
+    return INV.Count(inv, ammo_item_id)
+end
+
+local function GetWeaponAmmoLabel(def)
+    if not def or not def.ammo_type then return nil end
+    return "Munitions de " .. tostring(def.ammo_type)
+end
+
 function INV.CalcValue(def, condition)
     local base = def and def.value
     if base == nil then return nil end
@@ -338,6 +348,9 @@ function INV.BuildPayload(state)
         local weight_int = RoundInt(weight)
         local dps = CalcDps(def)
         local vw = CalcVw(value, weight)
+        local ammo_mag = def.weapon and def.weapon.ammo or nil
+        local ammo_reserve = def.weapon and GetAmmoReserve(inv, def.weapon.ammo_type) or nil
+        local other = GetWeaponAmmoLabel(def)
         return {
             item_id = inst.base_id,
             instance_id = instance_id,
@@ -355,8 +368,10 @@ function INV.BuildPayload(state)
             deg = def.weapon and def.weapon.damage or nil,
             pds = weight_int,
             val = value,
-            other = def.ammo_type,
-            effects = def.effects or {}
+            other = other,
+            effects = def.effects or {},
+            ammo_mag = ammo_mag,
+            ammo_reserve = ammo_reserve
         }
     end
 
@@ -385,6 +400,9 @@ function INV.BuildPayload(state)
         local weight_int = RoundInt(weight)
         local dps = CalcDps(def)
         local vw = CalcVw(item_value, weight)
+        local ammo_mag = def.weapon and def.weapon.ammo or nil
+        local ammo_reserve = def.weapon and GetAmmoReserve(inv, def.weapon.ammo_type) or nil
+        local other = GetWeaponAmmoLabel(def)
 
         items_by_category[cat][#items_by_category[cat] + 1] = {
             item_id = entry.base_id,
@@ -410,8 +428,10 @@ function INV.BuildPayload(state)
             deg = def.weapon and def.weapon.damage or nil,
             pds = weight_int,
             val = item_value,
-            other = def.ammo_type,
-            effects = def.effects or {}
+            other = other,
+            effects = def.effects or {},
+            ammo_mag = ammo_mag,
+            ammo_reserve = ammo_reserve
         }
     end
 

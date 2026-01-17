@@ -110,12 +110,25 @@ local function ResolvePlayerFromInstigator(instigator)
     return nil
 end
 
-function NPC.AttachDebugHP(npc_id, hp)
+local function ApplyDamageWithDT(dmg, dt)
+    local minimum = dmg * 0.2
+    local reduced = dmg - (dt or 0)
+    if reduced < minimum then
+        reduced = minimum
+    end
+    if reduced < 0 then reduced = 0 end
+    return reduced
+end
+
+function NPC.AttachDebugHP(npc_id, hp, dt)
     local data = npc_id and NPC.List[npc_id]
     if not data or not data.character or not data.character:IsValid() then return end
 
     data.hp = hp or data.hp or 100
     data.max_hp = hp or data.max_hp or data.hp
+    if dt ~= nil then
+        data.dt = tonumber(dt) or 0
+    end
 
     local npc = data.character
     if npc.SetCanDie then
@@ -145,7 +158,8 @@ function NPC.AttachDebugHP(npc_id, hp)
         end
         data.last_damage_t = now
         local dmg = tonumber(amount) or 0
-        data.hp = math.max(0, data.hp - dmg)
+        local effective = ApplyDamageWithDT(dmg, data.dt or 0)
+        data.hp = math.max(0, data.hp - effective)
         if npc.SetCanDie then
             npc:SetCanDie((data.hp or 0) <= 0)
         end
@@ -164,7 +178,7 @@ function NPC.AttachDebugHP(npc_id, hp)
         local msg = "[NPC] " .. tostring(data.name or npc_id)
             .. " HP: " .. tostring(math.floor(data.hp + 0.5))
             .. "/" .. tostring(math.floor((data.max_hp or data.hp) + 0.5))
-            .. " (-" .. tostring(dmg) .. ")"
+            .. " (-" .. tostring(math.floor((effective or dmg) + 0.5)) .. ")"
         LOG.Info(msg)
 
         local player = ResolvePlayerFromInstigator(instigator)

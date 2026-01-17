@@ -14,6 +14,12 @@ This repo contains the gameplay logic, data-driven systems, and the client Lua b
 - `fallout-core`: server logic + client bridge (this repo)
 - `fallout-ui`: WebUI only (HTML/CSS/JS, no Lua)
 
+## Dependencies
+
+- `nact` (NPC AI framework)
+- `classlib` (required by NACT)
+- `csst` (required by NACT)
+
 ## Core Principles
 
 - Server authority for all gameplay decisions.

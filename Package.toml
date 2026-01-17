@@ -19,7 +19,7 @@
     compatibility_version = "1.100"
     # packages requirements
     packages_requirements = [
-                            
+                            "nact",
     ]
     # asset packs requirements
     assets_requirements = [

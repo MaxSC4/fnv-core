@@ -112,7 +112,7 @@ function ADM_CMD.Handle(player, message)
     local cmd = (args[1] or ""):lower()
 
     if cmd == "/help" then
-        return Reply(player, "Cmds: /money <currency> <amt> | /take <currency> <amt> | /giveitem <id> [amt] | /heal <amt> | /dmg <amt> | /save | /test_combat | /respawn | /strength /perception /endurance /charisma /intelligence /agility /luck <value>")
+        return Reply(player, "Cmds: /money <currency> <amt> | /take <currency> <amt> | /giveitem <id> [amt] | /heal <amt> | /dmg <amt> | /save | /test_combat | /respawn | /nact_spawn | /nact_despawn | /strength /perception /endurance /charisma /intelligence /agility /luck <value>")
     end
 
     if cmd == "/money" then
@@ -191,6 +191,22 @@ function ADM_CMD.Handle(player, message)
         end
         StartTestCombat(player, state)
         return
+    end
+
+    if cmd == "/nact_spawn" then
+        if NACT_TEST and NACT_TEST.Start then
+            NACT_TEST.Start()
+            return Reply(player, "NACT test NPC spawned.")
+        end
+        return Reply(player, "NACT test NPC not available.")
+    end
+
+    if cmd == "/nact_despawn" then
+        if NACT_TEST and NACT_TEST.Stop then
+            NACT_TEST.Stop()
+            return Reply(player, "NACT test NPC despawned.")
+        end
+        return Reply(player, "NACT test NPC not available.")
     end
 
 

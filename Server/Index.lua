@@ -46,6 +46,7 @@ Package.Require("Server/systems/admin/commands.lua")
 
 -- NPC
 Package.Require("Server/systems/npc/npc_service.lua")
+Package.Require("Server/systems/npc/nact_test.lua")
 
 -- DIALOG
 Package.Require("Server/systems/dialog/dialog_db.lua")
@@ -194,21 +195,7 @@ Package.Subscribe("Load", function()
         Rotator(0, 180, 0),
         "Veronica"
     )
-    NPC.Spawn(
-        "raider_debug",
-        Vector(1600, 800, 300),
-        Rotator(0, 90, 0),
-        "Raider"
-    )
-    if NPC.SetHostile then
-        NPC.SetHostile("raider_debug", true)
-    end
-    if NPC.AttachDebugHP then
-        NPC.AttachDebugHP("raider_debug", 250)
-    end
-    if PAWN_TEST and PAWN_TEST.Start then
-        PAWN_TEST.Start(Vector(1500, 700, 300))
-    end
+    -- NACT test NPC is now spawned via admin commands
 
     if CONTAINER and CONTAINER.Spawn then
         CONTAINER.Spawn(

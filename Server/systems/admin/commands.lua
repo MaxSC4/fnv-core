@@ -2,10 +2,11 @@ ADM_CMD = {}
 ADM_CMD.TEST_COMBAT = ADM_CMD.TEST_COMBAT or {}
 
 local function Reply(player, text, ms)
-    Events.CallRemote("FNV:HUD:Notify", player, {
-        text = tostring(text),
-        ms = ms or 10000
-    })
+    if HUD_NOTIFY and HUD_NOTIFY.Send then
+        HUD_NOTIFY.Send(player, tostring(text), ms or 10000)
+        return
+    end
+    Events.CallRemote("FNV:HUD:Notify", player, { text = tostring(text), ms = ms or 10000 })
 end
 
 local function Split(str)

@@ -11,6 +11,10 @@ local function DistSq(a, b)
 end
 
 local function Notify(player, text, ms)
+    if HUD_NOTIFY and HUD_NOTIFY.Send then
+        HUD_NOTIFY.Send(player, tostring(text), ms or 2000)
+        return
+    end
     Events.CallRemote("FNV:HUD:Notify", player, { text = tostring(text), ms = ms or 2000 })
 end
 
@@ -193,7 +197,11 @@ function NPC.AttachDebugHP(npc_id, hp, dt)
 
         local player = ResolvePlayerFromInstigator(instigator)
         if player and player.GetName then
-            Events.CallRemote("FNV:HUD:Notify", player, { text = msg, ms = 1500 })
+            if HUD_NOTIFY and HUD_NOTIFY.Send then
+                HUD_NOTIFY.Send(player, msg, 1500)
+            else
+                Events.CallRemote("FNV:HUD:Notify", player, { text = msg, ms = 1500 })
+            end
         end
     end
 
@@ -276,7 +284,11 @@ Events.SubscribeRemote("FNV:NPC:Interact", function(player, payload)
         return
     end
 
-    Events.CallRemote("FNV:HUD:Notify", player, { text = "Vous parlez avec " .. data.name, ms = 2500 })
+    if HUD_NOTIFY and HUD_NOTIFY.Send then
+        HUD_NOTIFY.Send(player, "Vous parlez avec " .. data.name, 2500)
+    else
+        Events.CallRemote("FNV:HUD:Notify", player, { text = "Vous parlez avec " .. data.name, ms = 2500 })
+    end
     if DIALOG and DIALOG.Start then
         DIALOG.Start(player, npc_id)
         LOG.Info("[DIALOG] Start npc_id=" .. tostring(npc_id))

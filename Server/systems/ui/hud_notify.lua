@@ -10,6 +10,7 @@ function HUD_NOTIFY.Send(player, text_or_payload, ms, icon)
         end
     end
     if type(text_or_payload) == "table" then
+        text_or_payload.icon = "popup/glow_content"
         Events.CallRemote("FNV:HUD:Notify", player, text_or_payload)
         return
     end
@@ -18,8 +19,6 @@ function HUD_NOTIFY.Send(player, text_or_payload, ms, icon)
         text = tostring(text_or_payload),
         ms = ms or 2500
     }
-    if icon then
-        payload.icon = icon
-    end
+    payload.icon = "popup/glow_content"
     Events.CallRemote("FNV:HUD:Notify", player, payload)
 end

@@ -447,6 +447,10 @@ function INV.BuildPayload(state)
     local pds_current_int = RoundInt(pds_current)
     local pds_max_int = RoundInt(pds_max)
     local dt, dr = CalcArmorStats(state, inv)
+    local caps = 0
+    if state and state.wallet and WALLET and WALLET.Get then
+        caps = WALLET.Get(state.wallet, "caps") or 0
+    end
 
     if LOG and LOG.Info then
         LOG.Info(string.format("[PDS] current=%s max=%s",
@@ -467,6 +471,7 @@ function INV.BuildPayload(state)
             dr = dr,
             dt = dt,
             xp = { now = 1000, max = 1000 },
+            caps = caps,
             hp = { current = state and state.hp or 0, max = state and state.hp_max or 0 }
         },
         special = state and state.special or nil,

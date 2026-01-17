@@ -131,9 +131,16 @@ local function GetAmmoReserve(inv, ammo_item_id)
     return INV.Count(inv, ammo_item_id)
 end
 
-local function GetWeaponAmmoLabel(def)
-    if not def or not def.ammo_type then return nil end
-    return "Munitions de " .. tostring(def.ammo_type)
+local function GetOtherLabel(def)
+    if not def then return nil end
+    if def.category == "weapons" and def.ammo_type then
+        return "Mun. de " .. tostring(def.ammo_type)
+    end
+    if def.category == "apparel" and def.type then
+        local label = tostring(def.type)
+        return label:sub(1, 1):upper() .. label:sub(2)
+    end
+    return nil
 end
 
 function INV.CalcValue(def, condition)
@@ -350,7 +357,7 @@ function INV.BuildPayload(state)
         local vw = CalcVw(value, weight)
         local ammo_mag = def.weapon and def.weapon.ammo or nil
         local ammo_reserve = def.weapon and GetAmmoReserve(inv, def.weapon.ammo_type) or nil
-        local other = GetWeaponAmmoLabel(def)
+        local other = GetOtherLabel(def)
         return {
             item_id = inst.base_id,
             instance_id = instance_id,
@@ -402,7 +409,7 @@ function INV.BuildPayload(state)
         local vw = CalcVw(item_value, weight)
         local ammo_mag = def.weapon and def.weapon.ammo or nil
         local ammo_reserve = def.weapon and GetAmmoReserve(inv, def.weapon.ammo_type) or nil
-        local other = GetWeaponAmmoLabel(def)
+        local other = GetOtherLabel(def)
 
         items_by_category[cat][#items_by_category[cat] + 1] = {
             item_id = entry.base_id,
@@ -459,7 +466,8 @@ function INV.BuildPayload(state)
             pds = { current = pds_current_int, max = pds_max_int },
             dr = dr,
             dt = dt,
-            xp = { now = 1000, max = 1000 }
+            xp = { now = 1000, max = 1000 },
+            hp = { current = state and state.hp or 0, max = state and state.hp_max or 0 }
         },
         special = state and state.special or nil,
         derived = {

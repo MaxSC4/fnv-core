@@ -149,6 +149,7 @@ ITEMS = {
         category = "aid",
         wg = 0.5,
         cnd = 100,
+        icon = "items/item_rad_x.png",
         value = 25,
         max_stack = 20
     },
@@ -159,6 +160,7 @@ ITEMS = {
         category = "aid",
         wg = 0.5,
         cnd = 100,
+        icon = "items/items_radaway.png",
         value = 40,
         max_stack = 20
     },
@@ -169,6 +171,7 @@ ITEMS = {
         category = "misc",
         wg = 2.0,
         cnd = 100,
+        icon = "items/item_junk.png",
         value = 5,
         max_stack = 50
     },
